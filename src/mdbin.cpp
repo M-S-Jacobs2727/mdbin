@@ -6,10 +6,10 @@
 
 namespace MDBIN
 {
-Status write(const std::filesystem::path& binfile, const Data& data)
+Status write(const std::filesystem::path& binfile, const HeaderInfo& info, const std::vector<double>& data)
 {
     std::ofstream ofs(binfile, std::fstream::binary);
-    // TODO: Checks for data.data.size(), data.columnLabels.size(), stepRange vs numFrames
+    // TODO: Checks for info.info.size(), info.columnLabels.size(), stepRange vs numFrames
 
     if (!ofs.good())
         return Status::ioError;
@@ -21,12 +21,12 @@ Status write(const std::filesystem::path& binfile, const Data& data)
     ofs.write(reinterpret_cast<const char*>(&versionMajor), sizeof(uint32_t));
     ofs.write(reinterpret_cast<const char*>(&versionMinor), sizeof(uint32_t));
 
-    ofs.write(reinterpret_cast<const char*>(&data.initStep), sizeof(uint64_t));
-    ofs.write(reinterpret_cast<const char*>(&data.endStep), sizeof(uint64_t));
-    ofs.write(reinterpret_cast<const char*>(&data.deltaStep), sizeof(uint64_t));
+    ofs.write(reinterpret_cast<const char*>(&info.initStep), sizeof(uint64_t));
+    ofs.write(reinterpret_cast<const char*>(&info.endStep), sizeof(uint64_t));
+    ofs.write(reinterpret_cast<const char*>(&info.deltaStep), sizeof(uint64_t));
 
-    std::ostringstream oss(data.columnLabels[0]);
-    for (auto it = data.columnLabels.begin() + 1; it != data.columnLabels.end(); ++it)
+    std::ostringstream oss(info.columnLabels[0]);
+    for (auto it = info.columnLabels.begin() + 1; it != info.columnLabels.end(); ++it)
         oss << '\n' << *it;
     
     std::string columns = oss.str();
@@ -35,18 +35,18 @@ Status write(const std::filesystem::path& binfile, const Data& data)
     ofs.write(reinterpret_cast<const char*>(&size), sizeof(uint64_t));
     ofs.write(columns.c_str(), columns.size());
 
-    ofs.write(reinterpret_cast<const char*>(&data.numFrames), sizeof(uint64_t));
-    ofs.write(reinterpret_cast<const char*>(&data.numAtoms), sizeof(uint64_t));
-    ofs.write(reinterpret_cast<const char*>(&data.numCols), sizeof(uint64_t));
+    ofs.write(reinterpret_cast<const char*>(&info.numFrames), sizeof(uint64_t));
+    ofs.write(reinterpret_cast<const char*>(&info.numAtoms), sizeof(uint64_t));
+    ofs.write(reinterpret_cast<const char*>(&info.numCols), sizeof(uint64_t));
 
-    ofs.write(reinterpret_cast<const char*>(data.data.data()), data.data.size() * sizeof(double));
+    ofs.write(reinterpret_cast<const char*>(data.data()), data.size() * sizeof(double));
 
     ofs.close();
 
     return Status::good;
 }
 
-Status append(const std::filesystem::path& binfile, const Data& data)
+Status append(const std::filesystem::path& binfile, const std::vector<double>& data)
 {
     std::fstream iofs(binfile, std::fstream::binary | std::fstream::in | std::fstream::out);
     
@@ -56,13 +56,13 @@ Status append(const std::filesystem::path& binfile, const Data& data)
         return Status::syntaxError;
     
     iofs.seekp(0, std::fstream::end);
-    iofs.write(reinterpret_cast<const char*>(data.data.data()), data.data.size()*sizeof(double));
+    iofs.write(reinterpret_cast<const char*>(data.data()), data.size()*sizeof(double));
     iofs.close();
 
     return Status::good;
 }
 
-Status read(const std::filesystem::path& binfile, Data& data)
+Status read(const std::filesystem::path& binfile, HeaderInfo& info, std::vector<double>& data)
 {
     std::ifstream ifs(binfile, std::ios::binary);
 
@@ -76,21 +76,21 @@ Status read(const std::filesystem::path& binfile, Data& data)
     ifs.read(reinterpret_cast<char*>(&ver_maj), sizeof(uint32_t));
     ifs.read(reinterpret_cast<char*>(&ver_min), sizeof(uint32_t));
 
-    ifs.read(reinterpret_cast<char*>(&data.initStep), sizeof(uint64_t));
-    ifs.read(reinterpret_cast<char*>(&data.endStep), sizeof(uint64_t));
-    ifs.read(reinterpret_cast<char*>(&data.deltaStep), sizeof(uint64_t));
+    ifs.read(reinterpret_cast<char*>(&info.initStep), sizeof(uint64_t));
+    ifs.read(reinterpret_cast<char*>(&info.endStep), sizeof(uint64_t));
+    ifs.read(reinterpret_cast<char*>(&info.deltaStep), sizeof(uint64_t));
 
     uint32_t nchars = 0;
     ifs.read(reinterpret_cast<char*>(&nchars), sizeof(uint32_t));
     word.reserve(nchars);
     ifs.read(word.data(), nchars);
 
-    ifs.read(reinterpret_cast<char*>(&data.numFrames), sizeof(uint64_t));
-    ifs.read(reinterpret_cast<char*>(&data.numAtoms), sizeof(uint64_t));
-    ifs.read(reinterpret_cast<char*>(&data.numCols), sizeof(uint64_t));
+    ifs.read(reinterpret_cast<char*>(&info.numFrames), sizeof(uint64_t));
+    ifs.read(reinterpret_cast<char*>(&info.numAtoms), sizeof(uint64_t));
+    ifs.read(reinterpret_cast<char*>(&info.numCols), sizeof(uint64_t));
 
-    data.data.resize(data.numFrames * data.numAtoms * data.numCols);
-    ifs.read(reinterpret_cast<char*>(data.data.data()), data.data.size());
+    data.resize(info.numFrames * info.numAtoms * info.numCols);
+    ifs.read(reinterpret_cast<char*>(data.data()), data.size());
     ifs.close();
     
 

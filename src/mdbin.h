@@ -10,7 +10,7 @@
 namespace MDBIN
 {
 enum class Status { good = 0, syntaxError = 1, ioError = 2 };
-struct Data
+struct HeaderInfo
 {
     uint64_t initStep = 0UL;
     uint64_t endStep = 0UL;
@@ -19,9 +19,8 @@ struct Data
     uint64_t numFrames = 0UL;
     uint64_t numAtoms = 0UL;
     uint32_t numCols = 0UL;
-    std::vector<double> data;
 };
-Status write(const std::filesystem::path&, const Data&);
-Status append(const std::filesystem::path&, const Data&);
-Status read(const std::filesystem::path&, Data&);
+Status write(const std::filesystem::path&, const HeaderInfo&, const std::vector<double>&);
+Status append(const std::filesystem::path&, const std::vector<double>&);
+Status read(const std::filesystem::path&, HeaderInfo&, std::vector<double>&);
 }
