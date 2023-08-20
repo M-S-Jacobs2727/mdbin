@@ -8,7 +8,7 @@ namespace MDBIN
 {
 Status write(const std::filesystem::path& binfile, const Data& data)
 {
-    std::ofstream ofs(binfile, std::ios::binary);
+    std::ofstream ofs(binfile, std::fstream::binary);
     // TODO: Checks for data.data.size(), data.columnLabels.size(), stepRange vs numFrames
 
     if (!ofs.good())
@@ -42,6 +42,22 @@ Status write(const std::filesystem::path& binfile, const Data& data)
     ofs.write(reinterpret_cast<const char*>(data.data.data()), data.data.size() * sizeof(double));
 
     ofs.close();
+
+    return Status::good;
+}
+
+Status append(const std::filesystem::path& binfile, const Data& data)
+{
+    std::fstream iofs(binfile, std::fstream::binary | std::fstream::in | std::fstream::out);
+    
+    std::string word = "12345678";
+    iofs.read(word.data(), 8);
+    if (word != "\xa0\xb1\xb5mdbin")
+        return Status::syntaxError;
+    
+    iofs.seekp(0, std::fstream::end);
+    iofs.write(reinterpret_cast<const char*>(data.data.data()), data.data.size()*sizeof(double));
+    iofs.close();
 
     return Status::good;
 }

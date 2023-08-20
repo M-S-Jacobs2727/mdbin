@@ -22,5 +22,6 @@ struct Data
     std::vector<double> data;
 };
 Status write(const std::filesystem::path&, const Data&);
+Status append(const std::filesystem::path&, const Data&);
 Status read(const std::filesystem::path&, Data&);
 }
